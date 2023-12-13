@@ -51,7 +51,7 @@ def apng_to_webm(input_apng, output_webm, sticker_main_size):
 @bot.message_handler(content_types=['document'])
 def handle_document(message):
     try:
-        bot.reply_to(message, "Processing your APNG file...")
+        bot.reply_to(message, "🍥 Pʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ APNG ғɪʟᴇ...")
         file_info = bot.get_file(message.document.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         f72hs = message.from_user.id
@@ -69,7 +69,19 @@ def handle_document(message):
         
     try:
         with open(f"{f72hs}.webm", 'rb') as sticker_file:
-            bot.send_document(message.chat.id, open(f"{f72hs}.webm", 'rb'))
+            sent_message = bot.send_document(message.chat.id, open(f"{f72hs}.webm", 'rb'))
+            file_id = sent_message.document.file_id
+            file_path = bot.get_file(file_id).file_path
+            base_url = 'https://api.telegram.org/file/bot' + TOKEN
+            full_raw_link = base_url + '/' + file_path
+            preju83 = f"https://jinix6.github.io/Webm_preview?video={full_raw_link}"
+            
+            markup = types.InlineKeyboardMarkup()
+            webApp = types.WebAppInfo(preju83)
+            button = types.InlineKeyboardButton(text="👁️Pʀᴇᴠɪᴇᴡ", web_app=webApp)
+            markup.add(button)
+            bot.send_message(message.chat.id, "🔘 Cʟɪᴄᴋ Tʜᴇ Bᴜᴛᴛᴏɴ Tᴏ Vɪsɪᴛ Tʜᴇ Pʀᴇᴠɪᴇᴡ Pᴀɢᴇ:", reply_markup=markup)
+           
     except Exception as e:
         bot.send_message(message.chat.id, e)
         
