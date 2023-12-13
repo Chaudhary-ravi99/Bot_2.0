@@ -3,6 +3,8 @@ import subprocess
 import numpy as np
 import telebot
 import os
+from telebot import types
+
 
 TOKEN = os.getenv('TELEGRAM_BOT_API_ID')
 bot = telebot.TeleBot(TOKEN)
