@@ -118,7 +118,7 @@ def handle_document(message):
             bot.send_message(message.chat.id, "🔘 Cʟɪᴄᴋ Tʜᴇ Bᴜᴛᴛᴏɴ Tᴏ Vɪsɪᴛ Tʜᴇ Pʀᴇᴠɪᴇᴡ Pᴀɢᴇ:", reply_markup=markup)
             
             # Send the size information
-            size_info = f"WebM Size: {webm_size} bytes\nResized Dimensions: {new_width}x{new_height}"
+            size_info = f"📏 WᴇʙM Sɪᴢᴇ: {webm_size} bytes\n📏 Rᴇsɪᴢᴇᴅ Dɪᴍᴇɴsɪᴏɴs: {new_width}x{new_height}"
             bot.send_message(message.chat.id, size_info, reply_to_message_id=sent_message.message_id)
 
     except Exception as e:
