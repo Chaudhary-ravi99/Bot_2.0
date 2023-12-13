@@ -30,8 +30,11 @@ jobs:
           python -m pip install pyTelegramBotAPI==4.14.0
           python -m pip install numpy==1.26.2
           python -m pip install imageio==2.33.1
+          python -m pip install ffmpeg
 
       - name: Run Bot.py
         run: python Bot.py
         env:
           TELEGRAM_BOT_API_ID: ${{ secrets.TELEGRAM_BOT_API_ID }}
+          
+          
