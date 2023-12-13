@@ -15,7 +15,7 @@ def get_apng_size(apng_path):
     first_frame_size = apng_frames[0].shape[:2]  # Get the size of the first frame
     return f"{first_frame_size[1]}x{first_frame_size[0]}"  # Swap width and height for correct format
 
-def apng_to_webm(input_apng, output_webm):
+def apng_to_webm(input_apng, output_webm, sticker_main_size):
     apng_frames = imageio.mimread(input_apng)
     resized_frames = [frame[:int(sticker_main_size.split('x')[1]), :int(sticker_main_size.split('x')[0]), :] for frame in apng_frames]
 
@@ -61,7 +61,7 @@ def handle_document(message):
     except Exception as e:
         bot.send_message(message.chat.id, e)
     
-    apng_to_webm(f"{f72hs}.apng", f"{f72hs}.webm")
+    apng_to_webm(f"{f72hs}.apng", f"{f72hs}.webm", sticker_main_size)
     try:
         global sticker_main_size
         sticker_main_size = get_apng_size(f"{f72hs}.apng")
