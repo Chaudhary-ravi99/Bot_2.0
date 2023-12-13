@@ -61,11 +61,11 @@ def handle_document(message):
     except Exception as e:
         bot.send_message(message.chat.id, e)
     
-    
+    apng_to_webm(f"{f72hs}.apng", f"{f72hs}.webm")
     try:
         global sticker_main_size
         sticker_main_size = get_apng_size(f"{f72hs}.apng")
-        apng_to_webm(f"{f72hs}.apng", f"{f72hs}.webm")
+        
     except Exception as e:
         bot.send_message(message.chat.id, e)
         
