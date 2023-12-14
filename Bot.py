@@ -15,9 +15,12 @@ import string
 
 TOKEN = os.getenv('TELEGRAM_BOT_API_ID')
 bot = telebot.TeleBot(TOKEN)
+bot_info = bot.get_me()
+bot_username = bot_info.username
+
 user_states = {}
 user_data = {}
-HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK, STICKER_DOWNLOAD = range(7)
+HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK, STICKER_DOWNLOAD, DELSTICKER = range(8)
 
 sticker_pack_cre_mess = "🔥 Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Cʀᴇᴀᴛᴇᴅ."
 jinxx_mess_start = """
@@ -29,6 +32,8 @@ jinxx_mess_start = """
 🗑 Dᴇʟᴇᴛᴇ A Pᴀᴄᴋ: /delpack
 
 💟 Aᴅᴅ A Sᴛɪᴄᴋᴇʀ Tᴏ Aɴ Exɪsᴛɪɴɢ Pᴀᴄᴋ: /addsticker
+
+🚮 Rᴇᴍᴏᴠᴇ A Sᴛɪᴄᴋᴇʀ Fʀᴏᴍ Aɴ Exɪsᴛɪɴɢ Pᴀᴄᴋ: /delsticker
 
 🔁 Aᴘɴɢ Tᴏ Wᴇʙᴍ Cᴏɴᴠᴇʀᴛ: /apngtowebm
 
@@ -161,15 +166,37 @@ def create_sticker_pack(message):
 def create_sticker_pack(message):
     user_states[message.chat.id] = APNG_TO_WEBM
     bot.send_message(message.chat.id, "📂 Sᴇɴᴅ APNG Fɪʟᴇ")
-        
 
 
 
+@bot.message_handler(commands=['delsticker'])
+def create_sticker_pack(message):
+    user_states[message.chat.id] = DELSTICKER
+    bot.send_message(message.chat.id, "💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ")
+
+@bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == DELSTICKER)
+def handle_sticker(message):
+    sticker_id = message.sticker.file_id
+    try:
+        bot.delete_sticker_from_set(sticker_id)
+        bot.send_message(message.chat.id, "👍 I Hᴀᴠᴇ Dᴇʟᴇᴛᴇᴅ Tʜᴀᴛ Sᴛɪᴄᴋᴇʀ Fᴏʀ Yᴏᴜ, Iᴛ Wɪʟʟ Sᴛᴏᴘ Bᴇɪɴɢ Aᴠᴀɪʟᴀʙʟᴇ Tᴏ Tᴇʟᴇɢʀᴀᴍ Usᴇʀs Wɪᴛʜɪɴ Aɴ Hᴏᴜʀ.")
+    except telebot.apihelper.ApiException as e:
+        if "STICKERSET_INVALID" in str(e):
+            bot.send_message(message.chat.id, f"😢 Tʜɪs Mᴇᴛʜᴏᴅ Tᴏ Dᴇʟᴇᴛᴇ A Sᴛɪᴄᴋᴇʀ Fʀᴏᴍ A Sᴇᴛ Cʀᴇᴀᴛᴇᴅ Bʏ Tʜᴇ Bᴏᴛ.", parse_mode="Markdown")
+        elif "STICKERSET_NOT_MODIFIED" in str(e):
+            bot.send_message(message.chat.id, "👍 I Hᴀᴠᴇ Dᴇʟᴇᴛᴇᴅ Tʜᴀᴛ Sᴛɪᴄᴋᴇʀ Fᴏʀ Yᴏᴜ, Iᴛ Wɪʟʟ Sᴛᴏᴘ Bᴇɪɴɢ Aᴠᴀɪʟᴀʙʟᴇ Tᴏ Tᴇʟᴇɢʀᴀᴍ Usᴇʀs Wɪᴛʜɪɴ Aɴ Hᴏᴜʀ.")
+        else:
+            bot.send_message(message.chat.id, f"```ERROR {e}```", parse_mode="Markdown")
+    
+
+
+
+    
 @bot.message_handler(commands=['stickerdownload'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = STICKER_DOWNLOAD
     bot.send_message(message.chat.id, "💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ")
-
+    
 @bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == STICKER_DOWNLOAD)
 def handle_sticker(message):
     sticker_id = message.sticker.file_id
@@ -183,8 +210,6 @@ def handle_sticker(message):
     stucker_don_file_name = f"{user_id_jinxx}sticker.{content_type}"
     with open(stucker_don_file_name, "wb") as webm_file:
         webm_file.write(response.content)
-   
-    
     if content_type == "tgs":
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
@@ -195,8 +220,6 @@ def handle_sticker(message):
     
     with open(stucker_don_file_name, 'rb') as sticker_file:
         bot.send_video(message.chat.id, sticker_file, caption=stucker_don_file_name)
-    
-    
     try:
         os.remove(stucker_don_file_name)
     except Exception as e:
@@ -213,14 +236,9 @@ def create_sticker_pack(message):
 def handle_document4(message):
     sticker_pack_link = message.text
     sticker_pack_name = sticker_pack_link.split("/")[-1]
-    
     bot.delete_sticker_set(sticker_pack_name)
     bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
     user_states[message.chat.id] = HOME
-
-
-
-
 
 @bot.message_handler(commands=['addsticker'])
 def create_sticker_pack(message):
@@ -262,7 +280,7 @@ def handle_document2(message):
         try:
             user_id = str(message.from_user.id)
             random_result = generate_random_string()
-            sticker_pack_name = f'{random_result}_by_ApngTowebm_Bot'
+            sticker_pack_name = f'{random_result}_by_{bot_username}'
             print(sticker_pack_name)
             sticker_pack_title = '👩🏻‍💻 Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Cʀᴇᴀᴛᴇᴅ Bʏ @ApngTowebm_Bot'
             pack_info = bot.create_new_sticker_set(
