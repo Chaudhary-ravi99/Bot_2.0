@@ -5,12 +5,39 @@ import telebot
 import os
 from PIL import Image
 from telebot import types
+import random
+import string
+from telebot import util
 
 TOKEN = os.getenv('TELEGRAM_BOT_API_ID')
 bot = telebot.TeleBot(TOKEN)
 
 user_states = {}
-HOME, SET_SIZE = range(2)
+user_data = {}
+HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK = range(6)
+
+sticker_pack_cre_mess = "🔥 Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Cʀᴇᴀᴛᴇᴅ."
+jinxx_mess_start = """
+𝗔𝗣𝗡𝗚 𝗧𝗢 𝗪𝗘𝗕𝗠 𝗕𝗢𝗧 𝗕𝗬 👾𝗝𝗜𝗡𝗫𝗫
+
+
+✨ Cʀᴇᴀᴛᴇ A Nᴇᴡ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ: /newpack
+
+🗑 Dᴇʟᴇᴛᴇ A Pᴀᴄᴋ: /delpack
+
+💟 Aᴅᴅ A Sᴛɪᴄᴋᴇʀ Tᴏ Aɴ Exɪsᴛɪɴɢ Pᴀᴄᴋ: /addsticker
+
+🔁 Aᴘɴɢ Tᴏ Wᴇʙᴍ Cᴏɴᴠᴇʀᴛ: /apngtowebm
+
+❌ Cᴀɴᴄᴇʟ Tʜᴇ Cᴜʀʀᴇɴᴛ Oᴘᴇʀᴀᴛɪᴏɴ: /cancel
+"""
+
+def generate_random_string(length=10):
+    characters = string.ascii_letters + string.digits
+    random_string = ''.join(random.choice(characters) for _ in range(length))
+    return random_string
+
+
 
 def resize_apng_jinxx(larger_value, Num, Num2):
     if larger_value == Num:
@@ -83,7 +110,7 @@ def apng_to_webm(input_apng, output_webm, sticker_main_size):
     return webm_size, new_width, new_height
 
 
-@bot.message_handler(content_types=['document'])
+@bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == APNG_TO_WEBM)
 def handle_document(message):
     try:
         bot.reply_to(message, f"🍥 Pʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ APNG ғɪʟᴇ...")
@@ -131,4 +158,116 @@ def handle_document(message):
         bot.send_message(message.chat.id, e)
 
 
-bot.polling()
+
+@bot.message_handler(commands=['start'])
+def start_fun(message):
+    bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
+    user_states[message.chat.id] = HOME
+    
+
+@bot.message_handler(commands=['cancel'])
+def start_fun(message):
+    bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
+    user_states[message.chat.id] = HOME
+
+    
+@bot.message_handler(commands=['newpack'])
+def create_sticker_pack(message):
+    user_states[message.chat.id] = STICKER_PACK_TITLE
+    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+        
+@bot.message_handler(commands=['apngtowebm'])
+def create_sticker_pack(message):
+    user_states[message.chat.id] = APNG_TO_WEBM
+    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ APNG Fɪʟᴇ")
+        
+        
+        
+@bot.message_handler(commands=['delpack'])
+def create_sticker_pack(message):
+    user_states[message.chat.id] = DELPACK
+    bot.send_message(message.chat.id, "🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ")
+
+
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == DELPACK)
+def handle_document4(message):
+    sticker_pack_link = message.text
+    sticker_pack_name = sticker_pack_link.split("/")[-1]
+    try:
+      bot.delete_sticker_set(sticker_pack_name)
+    except Exception as e:
+            bot.send_message(message.chat.id, e)
+            
+    bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
+    user_states[message.chat.id] = HOME
+
+
+
+
+
+@bot.message_handler(commands=['addsticker'])
+def create_sticker_pack(message):
+    user_states[message.chat.id] = ADD_LINK_STICKER
+    bot.send_message(message.chat.id, "🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ")
+
+    
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == ADD_LINK_STICKER)
+def handle_document3(message):
+    user_id = str(message.from_user.id)
+    if user_id not in user_data:
+        user_data[user_id] = {}
+
+    user_data[user_id]['add_link_sticker'] = message.text
+    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+    user_states[message.chat.id] = ADD_STICKER
+    
+
+    
+@bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == ADD_STICKER)
+def handle_document2(message):
+    user_id = str(message.from_user.id)
+    try:
+      if user_id not in user_data:
+          user_data[user_id] = {}
+        
+      sticker_pack_link = user_data[user_id]['add_link_sticker']
+    
+      sticker_pack_name = sticker_pack_link.split("/")[-1]
+      bot.add_sticker_to_set(user_id, sticker_pack_name, emojis="⭐", webm_sticker=message.document.file_id)
+      bot.send_message(message.chat.id, f"Sticker Added {sticker_pack_link}")
+      bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+    except Exception as e:
+            bot.send_message(message.chat.id, e)
+    
+    
+    
+@bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE)
+def handle_document2(message):
+    if message.document.mime_type == 'video/webm':
+        try:
+            user_id = str(message.from_user.id)
+            random_result = generate_random_string()
+            sticker_pack_name = f'{random_result}_by_ApngTowebm_Bot'
+            print(sticker_pack_name)
+            sticker_pack_title = 'Sticket Pack Created _by_@ApngTowebm_Bot'
+            pack_info = bot.create_new_sticker_set(
+            user_id=user_id,
+            name=sticker_pack_name,
+            title=sticker_pack_title,
+            emojis=['⭐'],
+            webm_sticker=message.document.file_id
+            )
+            bot.send_message(message.chat.id, f"{sticker_pack_cre_mess} https://t.me/addstickers/{sticker_pack_name}")
+            user_states[message.chat.id] = HOME
+    
+        except Exception as e:
+            bot.send_message(message.chat.id, e)
+    
+    
+    else:
+        bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+    
+    
+if __name__ == '__main__':
+    bot.polling(none_stop=True)
