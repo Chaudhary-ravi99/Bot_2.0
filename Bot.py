@@ -5,16 +5,19 @@ import telebot
 import os
 from PIL import Image
 from telebot import types
+from telebot import util
+import requests
+from telebot.types import InputFile
+import zipfile
+from io import BytesIO
 import random
 import string
-from telebot import util
 
 TOKEN = os.getenv('TELEGRAM_BOT_API_ID')
 bot = telebot.TeleBot(TOKEN)
-
 user_states = {}
 user_data = {}
-HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK = range(6)
+HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK, STICKER_DOWNLOAD = range(7)
 
 sticker_pack_cre_mess = "🔥 Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Cʀᴇᴀᴛᴇᴅ."
 jinxx_mess_start = """
@@ -29,6 +32,8 @@ jinxx_mess_start = """
 
 🔁 Aᴘɴɢ Tᴏ Wᴇʙᴍ Cᴏɴᴠᴇʀᴛ: /apngtowebm
 
+📥 Sᴛɪᴄᴋᴇʀ Dᴏᴡɴʟᴏᴀᴅᴇʀ: /stickerdownload
+
 ❌ Cᴀɴᴄᴇʟ Tʜᴇ Cᴜʀʀᴇɴᴛ Oᴘᴇʀᴀᴛɪᴏɴ: /cancel
 """
 
@@ -36,8 +41,6 @@ def generate_random_string(length=10):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(random.choice(characters) for _ in range(length))
     return random_string
-
-
 
 def resize_apng_jinxx(larger_value, Num, Num2):
     if larger_value == Num:
@@ -49,32 +52,24 @@ def resize_apng_jinxx(larger_value, Num, Num2):
         new_width = int(Num * (512 / Num2))
         jinxx = f"{new_width}x{new_height}"
     return jinxx
-
-
+    
 def get_apng_size(apng_path):
     apng_frames = imageio.mimread(apng_path)
     first_frame_size = apng_frames[0].shape[:2]
-
     Num = first_frame_size[1]
     Num2 = first_frame_size[0]
-
     larger_value = max(Num, Num2)
     ttttt = resize_apng_jinxx(larger_value, Num, Num2)
     apng_jinxx_size = ttttt
     return ttttt
 
-
 def apng_to_webm(input_apng, output_webm, sticker_main_size):
     apng_frames = imageio.mimread(input_apng)
-
     original_height, original_width, _ = apng_frames[0].shape
     aspect_ratio = original_width / original_height
-
     new_width = int(sticker_main_size.split('x')[0])
     new_height = int(new_width / aspect_ratio)
-
     resized_frames = [Image.fromarray(frame).resize((new_width, new_height)) for frame in apng_frames]
-
     ffmpeg_cmd = [
         'ffmpeg',
         '-f', 'rawvideo',
@@ -90,45 +85,33 @@ def apng_to_webm(input_apng, output_webm, sticker_main_size):
         '-pix_fmt', 'yuva420p',
         output_webm
     ]
-
     process = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
-
     try:
         for frame in resized_frames:
             process.stdin.write(np.array(frame).tobytes())
-
     except BrokenPipeError:
         pass
-
     finally:
         process.stdin.close()
         process.wait()
-
     # Get the size of the created WebM file
     webm_size = os.path.getsize(output_webm)
-
     return webm_size, new_width, new_height
-
 
 @bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == APNG_TO_WEBM)
 def handle_document(message):
     try:
         bot.reply_to(message, f"🍥 Pʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ APNG ғɪʟᴇ...")
-
         file_info = bot.get_file(message.document.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         f72hs = message.from_user.id
-
         with open(f"{f72hs}.apng", "wb") as file:
             file.write(downloaded_file)
-
     except Exception as e:
         bot.send_message(message.chat.id, e)
-
     try:
         sticker_main_size = get_apng_size(f"{f72hs}.apng")
         webm_size, new_width, new_height = apng_to_webm(f"{f72hs}.apng", f"{f72hs}.webm", sticker_main_size)
-
         # Send the WebM file
         with open(f"{f72hs}.webm", 'rb') as sticker_file:
             sent_message = bot.send_document(message.chat.id, sticker_file)
@@ -137,13 +120,11 @@ def handle_document(message):
             base_url = 'https://api.telegram.org/file/bot' + TOKEN
             full_raw_link = base_url + '/' + file_path
             preju83 = f"https://jinix6.github.io/Webm_preview?video={full_raw_link}"
-            
             markup = types.InlineKeyboardMarkup()
             webApp = types.WebAppInfo(preju83)
             button = types.InlineKeyboardButton(text="👁️Pʀᴇᴠɪᴇᴡ", web_app=webApp)
             markup.add(button)
             bot.send_message(message.chat.id, "🔘 Cʟɪᴄᴋ Tʜᴇ Bᴜᴛᴛᴏɴ Tᴏ Vɪsɪᴛ Tʜᴇ Pʀᴇᴠɪᴇᴡ Pᴀɢᴇ:", reply_markup=markup)
-            
             # Send the size information
             size_info = f"📏 WᴇʙM Sɪᴢᴇ: {webm_size} bytes\n📏 Rᴇsɪᴢᴇᴅ Dɪᴍᴇɴsɪᴏɴs: {new_width}x{new_height}"
             bot.send_message(message.chat.id, size_info, reply_to_message_id=sent_message.message_id)
@@ -181,24 +162,59 @@ def create_sticker_pack(message):
     user_states[message.chat.id] = APNG_TO_WEBM
     bot.send_message(message.chat.id, "📂 Sᴇɴᴅ APNG Fɪʟᴇ")
         
-        
+
+
+
+@bot.message_handler(commands=['stickerdownload'])
+def create_sticker_pack(message):
+    user_states[message.chat.id] = STICKER_DOWNLOAD
+    bot.send_message(message.chat.id, "💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ")
+
+@bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == STICKER_DOWNLOAD)
+def handle_sticker(message):
+    sticker_id = message.sticker.file_id
+    user_id_jinxx = message.from_user.id
+    # Get sticker file details
+    file_info = bot.get_file(sticker_id)
+    file_path = file_info.file_path
+    content_type = file_info.file_path.split('.')[-1]
+    webm_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
+    response = requests.get(webm_url)
+    stucker_don_file_name = f"{user_id_jinxx}sticker.{content_type}"
+    with open(stucker_don_file_name, "wb") as webm_file:
+        webm_file.write(response.content)
+   
+    
+    if content_type == "tgs":
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.write(stucker_don_file_name)
+        zip_buffer.seek(0)
+        random_file_name = generate_random_string()
+        bot.send_document(message.chat.id, zip_buffer, caption='Sticker in Zip', visible_file_name=f'{random_file_name}.zip')
+    
+    with open(stucker_don_file_name, 'rb') as sticker_file:
+        bot.send_video(message.chat.id, sticker_file, caption=stucker_don_file_name)
+    
+    
+    try:
+        os.remove(stucker_don_file_name)
+    except Exception as e:
+        bot.send_message(message.chat.id, e)
+
+
         
 @bot.message_handler(commands=['delpack'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = DELPACK
     bot.send_message(message.chat.id, "🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ")
 
-
-
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == DELPACK)
 def handle_document4(message):
     sticker_pack_link = message.text
     sticker_pack_name = sticker_pack_link.split("/")[-1]
-    try:
-      bot.delete_sticker_set(sticker_pack_name)
-    except Exception as e:
-            bot.send_message(message.chat.id, e)
-            
+    
+    bot.delete_sticker_set(sticker_pack_name)
     bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
     user_states[message.chat.id] = HOME
 
@@ -227,18 +243,16 @@ def handle_document3(message):
 @bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == ADD_STICKER)
 def handle_document2(message):
     user_id = str(message.from_user.id)
-    try:
-      if user_id not in user_data:
-          user_data[user_id] = {}
-        
-      sticker_pack_link = user_data[user_id]['add_link_sticker']
     
-      sticker_pack_name = sticker_pack_link.split("/")[-1]
-      bot.add_sticker_to_set(user_id, sticker_pack_name, emojis="⭐", webm_sticker=message.document.file_id)
-      bot.send_message(message.chat.id, f"Sticker Added {sticker_pack_link}")
-      bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
-    except Exception as e:
-            bot.send_message(message.chat.id, e)
+    if user_id not in user_data:
+        user_data[user_id] = {}
+        
+    sticker_pack_link = user_data[user_id]['add_link_sticker']
+    
+    sticker_pack_name = sticker_pack_link.split("/")[-1]
+    bot.add_sticker_to_set(user_id, sticker_pack_name, emojis="⭐", webm_sticker=message.document.file_id)
+    bot.send_message(message.chat.id, f"Sticker Added {sticker_pack_link}")
+    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
     
     
     
@@ -250,7 +264,7 @@ def handle_document2(message):
             random_result = generate_random_string()
             sticker_pack_name = f'{random_result}_by_ApngTowebm_Bot'
             print(sticker_pack_name)
-            sticker_pack_title = 'Sticket Pack Created _by_@ApngTowebm_Bot'
+            sticker_pack_title = '👩🏻‍💻 Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Cʀᴇᴀᴛᴇᴅ Bʏ @ApngTowebm_Bot'
             pack_info = bot.create_new_sticker_set(
             user_id=user_id,
             name=sticker_pack_name,
