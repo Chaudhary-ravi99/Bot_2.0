@@ -42,6 +42,12 @@ jinxx_mess_start = """
 ❌ Cᴀɴᴄᴇʟ Tʜᴇ Cᴜʀʀᴇɴᴛ Oᴘᴇʀᴀᴛɪᴏɴ: /cancel
 """
 
+
+
+
+
+
+
 def generate_random_string(length=10):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(random.choice(characters) for _ in range(length))
@@ -106,19 +112,23 @@ def apng_to_webm(input_apng, output_webm, sticker_main_size):
 @bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == APNG_TO_WEBM)
 def handle_document(message):
     try:
+        bot.send_chat_action(message.chat.id, 'typing')
         bot.reply_to(message, f"🍥 Pʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ APNG ғɪʟᴇ...")
         file_info = bot.get_file(message.document.file_id)
+        bot.send_chat_action(message.chat.id, 'upload_document')
         downloaded_file = bot.download_file(file_info.file_path)
         f72hs = message.from_user.id
         with open(f"{f72hs}.apng", "wb") as file:
             file.write(downloaded_file)
     except Exception as e:
+        bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, e)
     try:
         sticker_main_size = get_apng_size(f"{f72hs}.apng")
         webm_size, new_width, new_height = apng_to_webm(f"{f72hs}.apng", f"{f72hs}.webm", sticker_main_size)
         # Send the WebM file
         with open(f"{f72hs}.webm", 'rb') as sticker_file:
+            bot.send_chat_action(message.chat.id, 'upload_document')
             sent_message = bot.send_document(message.chat.id, sticker_file)
             file_id = sent_message.document.file_id
             file_path = bot.get_file(file_id).file_path
@@ -129,30 +139,36 @@ def handle_document(message):
             webApp = types.WebAppInfo(preju83)
             button = types.InlineKeyboardButton(text="👁️Pʀᴇᴠɪᴇᴡ", web_app=webApp)
             markup.add(button)
+            bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, "🔘 Cʟɪᴄᴋ Tʜᴇ Bᴜᴛᴛᴏɴ Tᴏ Vɪsɪᴛ Tʜᴇ Pʀᴇᴠɪᴇᴡ Pᴀɢᴇ:", reply_markup=markup)
             # Send the size information
             size_info = f"📏 WᴇʙM Sɪᴢᴇ: {webm_size} bytes\n📏 Rᴇsɪᴢᴇᴅ Dɪᴍᴇɴsɪᴏɴs: {new_width}x{new_height}"
+            bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, size_info, reply_to_message_id=sent_message.message_id)
 
     except Exception as e:
+        bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, e)
 
     try:
         os.remove(f"{f72hs}.apng")
         os.remove(f"{f72hs}.webm")
     except Exception as e:
+        bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, e)
 
 
 
 @bot.message_handler(commands=['start'])
 def start_fun(message):
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
     user_states[message.chat.id] = HOME
     
 
 @bot.message_handler(commands=['cancel'])
 def start_fun(message):
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
     user_states[message.chat.id] = HOME
 
@@ -160,11 +176,13 @@ def start_fun(message):
 @bot.message_handler(commands=['newpack'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = STICKER_PACK_TITLE
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
         
 @bot.message_handler(commands=['apngtowebm'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = APNG_TO_WEBM
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, "📂 Sᴇɴᴅ APNG Fɪʟᴇ")
 
 
@@ -172,6 +190,7 @@ def create_sticker_pack(message):
 @bot.message_handler(commands=['delsticker'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = DELSTICKER
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, "💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ")
 
 @bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == DELSTICKER)
@@ -179,13 +198,17 @@ def handle_sticker(message):
     sticker_id = message.sticker.file_id
     try:
         bot.delete_sticker_from_set(sticker_id)
+        bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, "👍 I Hᴀᴠᴇ Dᴇʟᴇᴛᴇᴅ Tʜᴀᴛ Sᴛɪᴄᴋᴇʀ Fᴏʀ Yᴏᴜ, Iᴛ Wɪʟʟ Sᴛᴏᴘ Bᴇɪɴɢ Aᴠᴀɪʟᴀʙʟᴇ Tᴏ Tᴇʟᴇɢʀᴀᴍ Usᴇʀs Wɪᴛʜɪɴ Aɴ Hᴏᴜʀ.")
     except telebot.apihelper.ApiException as e:
         if "STICKERSET_INVALID" in str(e):
+            bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, f"😢 Tʜɪs Mᴇᴛʜᴏᴅ Tᴏ Dᴇʟᴇᴛᴇ A Sᴛɪᴄᴋᴇʀ Fʀᴏᴍ A Sᴇᴛ Cʀᴇᴀᴛᴇᴅ Bʏ Tʜᴇ Bᴏᴛ.", parse_mode="Markdown")
         elif "STICKERSET_NOT_MODIFIED" in str(e):
+            bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, "👍 I Hᴀᴠᴇ Dᴇʟᴇᴛᴇᴅ Tʜᴀᴛ Sᴛɪᴄᴋᴇʀ Fᴏʀ Yᴏᴜ, Iᴛ Wɪʟʟ Sᴛᴏᴘ Bᴇɪɴɢ Aᴠᴀɪʟᴀʙʟᴇ Tᴏ Tᴇʟᴇɢʀᴀᴍ Usᴇʀs Wɪᴛʜɪɴ Aɴ Hᴏᴜʀ.")
         else:
+            bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, f"```ERROR {e}```", parse_mode="Markdown")
     
 
@@ -195,6 +218,7 @@ def handle_sticker(message):
 @bot.message_handler(commands=['stickerdownload'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = STICKER_DOWNLOAD
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, "💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ")
     
 @bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == STICKER_DOWNLOAD)
@@ -216,13 +240,16 @@ def handle_sticker(message):
             zip_file.write(stucker_don_file_name)
         zip_buffer.seek(0)
         random_file_name = generate_random_string()
+        bot.send_chat_action(message.chat.id, 'upload_document')
         bot.send_document(message.chat.id, zip_buffer, caption='Sticker in Zip', visible_file_name=f'{random_file_name}.zip')
     
     with open(stucker_don_file_name, 'rb') as sticker_file:
+        bot.send_chat_action(message.chat.id, 'upload_document')
         bot.send_video(message.chat.id, sticker_file, caption=stucker_don_file_name)
     try:
         os.remove(stucker_don_file_name)
     except Exception as e:
+        bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, e)
 
 
@@ -230,6 +257,7 @@ def handle_sticker(message):
 @bot.message_handler(commands=['delpack'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = DELPACK
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, "🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ")
 
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == DELPACK)
@@ -237,12 +265,14 @@ def handle_document4(message):
     sticker_pack_link = message.text
     sticker_pack_name = sticker_pack_link.split("/")[-1]
     bot.delete_sticker_set(sticker_pack_name)
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
     user_states[message.chat.id] = HOME
 
 @bot.message_handler(commands=['addsticker'])
 def create_sticker_pack(message):
     user_states[message.chat.id] = ADD_LINK_STICKER
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, "🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ")
 
     
@@ -253,6 +283,7 @@ def handle_document3(message):
         user_data[user_id] = {}
 
     user_data[user_id]['add_link_sticker'] = message.text
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
     user_states[message.chat.id] = ADD_STICKER
     
@@ -269,6 +300,7 @@ def handle_document2(message):
     
     sticker_pack_name = sticker_pack_link.split("/")[-1]
     bot.add_sticker_to_set(user_id, sticker_pack_name, emojis="⭐", webm_sticker=message.document.file_id)
+    bot.send_chat_action(message.chat.id, 'typing')
     bot.send_message(message.chat.id, f"Sticker Added {sticker_pack_link}")
     bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
     
@@ -290,14 +322,17 @@ def handle_document2(message):
             emojis=['⭐'],
             webm_sticker=message.document.file_id
             )
+            bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, f"{sticker_pack_cre_mess} https://t.me/addstickers/{sticker_pack_name}")
             user_states[message.chat.id] = HOME
     
         except Exception as e:
+            bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, e)
     
     
     else:
+        bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
     
     
