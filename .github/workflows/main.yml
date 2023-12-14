@@ -1,6 +1,9 @@
 name: Run Bot.py with Virtual Environment
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 */1 * * *'
 
@@ -21,7 +24,7 @@ jobs:
         run: python -m venv venv
 
       - name: Activate the virtual environment
-        run: . venv/bin/activate
+        run: source venv/bin/activate
 
       - name: Install required libraries
         run: |
@@ -32,11 +35,9 @@ jobs:
           python -m pip install Pillow==10.1.0
           python -m pip install requests==2.31.0
           sudo apt-get install ffmpeg
-
       - name: Run Bot.py
-        run: python Bot.py
+        run: |
+          # Ensure only one instance of the bot is running
+          flock -n ./lockfile python Bot.py
         env:
           TELEGRAM_BOT_API_ID: ${{ secrets.TELEGRAM_BOT_API_ID }}
-  
-         
-             
