@@ -3,7 +3,6 @@ name: Run Bot.py with Virtual Environment
 on:
   schedule:
     - cron: '0 */1 * * *'
-  
 
 jobs:
   build:
