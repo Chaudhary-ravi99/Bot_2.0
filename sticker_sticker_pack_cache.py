@@ -48,14 +48,12 @@ def get_user_data(user_id):
         return None
 
 
-
-
-
-
 def delete_data_from_json(username, data_to_delete):
+    file_path = 'sticker_sticker_pack_cache.json'
+
     try:
         # Load existing data or create an empty dictionary
-        with open('sticker_sticker_pack_cache.json', 'r') as file:
+        with open(file_path, 'r') as file:
             json_data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         json_data = {}
@@ -66,10 +64,11 @@ def delete_data_from_json(username, data_to_delete):
         json_data[username] = [item for item in json_data[username] if item not in data_to_delete]
 
         # Write the updated data back to the file
-        with open('data.json', 'w') as file:
+        with open(file_path, 'w') as file:
             json.dump(json_data, file, indent=2)
     else:
         print(f"Username '{username}' not found.")
+
 
 # Example usernames and data
 #username1 = 'Username'
