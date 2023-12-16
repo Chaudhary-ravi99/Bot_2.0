@@ -274,12 +274,26 @@ def create_sticker_pack(message):
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == DELPACK)
 def handle_document4(message):
     sticker_pack_link = message.text
+    user_id = str(message.from_user.id)
     if check_link(sticker_pack_link):
         sticker_pack_name = sticker_pack_link.split("/")[-1]
         try:
             bot.delete_sticker_set(sticker_pack_name)
             bot.send_chat_action(message.chat.id, 'typing')
-            bot.send_message( message.chat.id, jinxx_mess_start, parse_mode="Markdown")
+            data_to_delete = [message.text]
+            delete_data_from_json(user_id, data_to_delete)
+
+            result_data = get_user_data(user_id)
+            if result_data:
+                formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
+                result = "\n".join(formatted_links)
+                bot.send_message(message.chat.id, f"{jinxx_mess_start}\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", parse_mode="Markdown")
+            else:
+                bot.send_message(message.chat.id, f"{jinxx_mess_start}", parse_mode="Markdown")
+        
+            
+            
+           
             user_states[message.chat.id] = HOME
         except telebot.apihelper.ApiException as e:
             if "STICKERSET_INVALID" in str(e):
