@@ -33,9 +33,14 @@ jobs:
           python -m pip install Pillow==10.1.0
           python -m pip install requests==2.31.0
           sudo apt-get install ffmpeg
-      - name: Run Bot.py
+
+      - name: Run Bot.py with retry
         run: |
-          # Ensure only one instance of the bot is running
-          flock -n ./lockfile python Bot.py
+          retries=3
+          until [ $retries -le 0 ]; do
+            flock -n ./lockfile python Bot.py && break
+            retries=$((retries-1))
+            sleep 5  # Adjust the sleep duration as needed
+          done
         env:
           TELEGRAM_BOT_API_ID: ${{ secrets.TELEGRAM_BOT_API_ID }}
