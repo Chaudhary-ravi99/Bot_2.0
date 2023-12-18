@@ -1,175 +1,44 @@
-import imageio
-import subprocess
-import numpy as np
 import telebot
 import os
-from PIL import Image
 from telebot import types
 from telebot import util
 import requests
 from telebot.types import InputFile
 import zipfile
 from io import BytesIO
-import random
-import string
-from sticker_sticker_pack_cache import add_data_to_json, get_user_data, delete_data_from_json
+from jinxx.sticker_sticker_pack_cache import add_data_to_json, get_user_data, delete_data_from_json
+from jinxx.others_jinxx import check_link, generate_random_string, resize_apng_jinxx, get_apng_size, apng_to_webm, gif_to_webm, check_image_type, png_to_webm, video_to_webm, get_video_size
+from jinxx.jinxx_str import *
+from telebot import apihelper
 
 TOKEN = os.getenv('TELEGRAM_BOT_API_ID')
 bot = telebot.TeleBot(TOKEN)
 bot_info = bot.get_me()
 bot_username = bot_info.username
-
 user_states = {}
 user_data = {}
+saved_message_ids = []
+saved_message_ids_v2 = []
 HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK, STICKER_DOWNLOAD, DELSTICKER = range(8)
 send_st_pack_link_text = telebot.types.ForceReply(input_field_placeholder="🔗 Pᴀsᴛᴇ Yᴏᴜʀ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ Hᴇʀᴇ:")
-sticker_pack_cre_mess = "🔥 Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Cʀᴇᴀᴛᴇᴅ."
-jinxx_mess_start = """
-𝗔𝗣𝗡𝗚 𝗧𝗢 𝗪𝗘𝗕𝗠 𝗕𝗢𝗧 𝗕𝗬 👾𝗝𝗜𝗡𝗫𝗫
-
-
-✨ Cʀᴇᴀᴛᴇ A Nᴇᴡ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ: /newpack
-
-🗑 Dᴇʟᴇᴛᴇ A Pᴀᴄᴋ: /delpack
-
-💟 Aᴅᴅ A Sᴛɪᴄᴋᴇʀ Tᴏ Aɴ Exɪsᴛɪɴɢ Pᴀᴄᴋ: /addsticker
-
-🚮 Rᴇᴍᴏᴠᴇ A Sᴛɪᴄᴋᴇʀ Fʀᴏᴍ Aɴ Exɪsᴛɪɴɢ Pᴀᴄᴋ: /delsticker
-
-🔁 Aᴘɴɢ Tᴏ Wᴇʙᴍ Cᴏɴᴠᴇʀᴛ: /apngtowebm
-
-📥 Sᴛɪᴄᴋᴇʀ Dᴏᴡɴʟᴏᴀᴅᴇʀ: /stickerdownload
-
-❌ Cᴀɴᴄᴇʟ Tʜᴇ Cᴜʀʀᴇɴᴛ Oᴘᴇʀᴀᴛɪᴏɴ: /cancel
+command_back = telebot.types.InlineKeyboardMarkup(row_width=1)
+b1 = telebot.types.InlineKeyboardButton(text="🔙 Bᴀᴄᴋ", callback_data='back')
+command_back.add(b1)
+command_list = telebot.types.InlineKeyboardMarkup(row_width=1)
+b1 = telebot.types.InlineKeyboardButton(text="✨Cʀᴇᴀᴛᴇ A Nᴇᴡ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ", callback_data='newpack')
+b2 = telebot.types.InlineKeyboardButton(text="💟 Aᴅᴅ A Sᴛɪᴄᴋᴇʀ Tᴏ Aɴ Exɪsᴛɪɴɢ Pᴀᴄᴋ", callback_data='addsticker')
+b3 = telebot.types.InlineKeyboardButton(text="🚮 Rᴇᴍᴏᴠᴇ Sᴛɪᴄᴋᴇʀ Fʀᴏᴍ Exɪsᴛɪɴɢ Pᴀᴄᴋ", callback_data='delsticker')
+b4 = telebot.types.InlineKeyboardButton(text="🗑 Dᴇʟᴇᴛᴇ A Pᴀᴄᴋ", callback_data='delpack')
+b5 = telebot.types.InlineKeyboardButton(text="🔁 Aᴘɴɢ, Pɴɢ, Gɪғ, Vɪᴅᴇᴏ Tᴏ Wᴇʙᴍ Cᴏɴᴠᴇʀᴛ", callback_data='apngtowebm')
+b6 = telebot.types.InlineKeyboardButton(text="📥 Sᴛɪᴄᴋᴇʀ Dᴏᴡɴʟᴏᴀᴅᴇʀ", callback_data='stickerdownload')
+command_list.add(b1, b2, b3, b4, b5, b6)
+command_list_header_text = """
+░░░░▒👾 𝗦𝗧𝗜𝗖𝗞𝗘𝗥 𝗕𝗢𝗧 0.1.8▒░░░░
+▓▓▓▓Mᴀᴅᴇ Bʏ [⊏Jɪɴxx⊐](tg://user?id=6903011562) [⊏Jɪɴxx²⊐](tg://user?id=6693765228)▓▓▓▓
 """
-
-
-
-
-def check_link(message):
-    if "https://t.me/addstickers/" in message:
-        hs72bsiqjb = True
-    else:
-        hs72bsiqjb = False
-    return hs72bsiqjb
-
-def generate_random_string(length=10):
-    characters = string.ascii_letters + string.digits
-    random_string = ''.join(random.choice(characters) for _ in range(length))
-    return random_string
-
-def resize_apng_jinxx(larger_value, Num, Num2):
-    if larger_value == Num:
-        new_width = 512
-        new_height = int(Num2 * (512 / Num))
-        jinxx = f"{new_width}x{new_height}"
-    elif larger_value == Num2:
-        new_height = 512
-        new_width = int(Num * (512 / Num2))
-        jinxx = f"{new_width}x{new_height}"
-    return jinxx
-    
-def get_apng_size(apng_path):
-    apng_frames = imageio.mimread(apng_path)
-    first_frame_size = apng_frames[0].shape[:2]
-    Num = first_frame_size[1]
-    Num2 = first_frame_size[0]
-    larger_value = max(Num, Num2)
-    ttttt = resize_apng_jinxx(larger_value, Num, Num2)
-    apng_jinxx_size = ttttt
-    return ttttt
-
-def apng_to_webm(input_apng, output_webm, sticker_main_size):
-    apng_frames = imageio.mimread(input_apng)
-    original_height, original_width, _ = apng_frames[0].shape
-    aspect_ratio = original_width / original_height
-    new_width = int(sticker_main_size.split('x')[0])
-    new_height = int(new_width / aspect_ratio)
-    resized_frames = [Image.fromarray(frame).resize((new_width, new_height)) for frame in apng_frames]
-    ffmpeg_cmd = [
-        'ffmpeg',
-        '-f', 'rawvideo',
-        '-vcodec', 'rawvideo',
-        '-s', f'{new_width}x{new_height}',
-        '-pix_fmt', 'rgba',
-        '-r', '60',
-        '-i', '-',
-        '-c:v', 'libvpx-vp9',
-        '-b:v', '256k',
-        '-crf', '10',
-        '-auto-alt-ref', '0',
-        '-pix_fmt', 'yuva420p',
-        output_webm
-    ]
-    process = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
-    try:
-        for frame in resized_frames:
-            process.stdin.write(np.array(frame).tobytes())
-    except BrokenPipeError:
-        pass
-    finally:
-        process.stdin.close()
-        process.wait()
-    # Get the size of the created WebM file
-    webm_size = os.path.getsize(output_webm)
-    return webm_size, new_width, new_height
-
-@bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == APNG_TO_WEBM)
-def handle_document(message):
-    if message.document.mime_type == 'video/webm':
-        try:
-            bot.send_chat_action(message.chat.id, 'typing')
-            bot.reply_to(message, f"🍥 Pʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ APNG ғɪʟᴇ...")
-            file_info = bot.get_file(message.document.file_id)
-            bot.send_chat_action(message.chat.id, 'upload_document')
-            downloaded_file = bot.download_file(file_info.file_path)
-            f72hs = message.from_user.id
-            with open(f"{f72hs}.apng", "wb") as file:
-                file.write(downloaded_file)
-        except Exception as e:
-            bot.send_chat_action(message.chat.id, 'typing')
-            bot.send_message(message.chat.id, e)
-        try:
-            sticker_main_size = get_apng_size(f"{f72hs}.apng")
-            webm_size, new_width, new_height = apng_to_webm(f"{f72hs}.apng", f"{f72hs}.webm", sticker_main_size)
-        # Send the WebM file
-            with open(f"{f72hs}.webm", 'rb') as sticker_file:
-                bot.send_chat_action(message.chat.id, 'upload_document')
-                sent_message = bot.send_document(message.chat.id, sticker_file)
-                file_id = sent_message.document.file_id
-                file_path = bot.get_file(file_id).file_path
-                base_url = 'https://api.telegram.org/file/bot' + TOKEN
-                full_raw_link = base_url + '/' + file_path
-                preju83 = f"https://jinix6.github.io/Webm_preview?video={full_raw_link}"
-                markup = types.InlineKeyboardMarkup()
-                webApp = types.WebAppInfo(preju83)
-                button = types.InlineKeyboardButton(text="👁️Pʀᴇᴠɪᴇᴡ", web_app=webApp)
-                markup.add(button)
-                bot.send_chat_action(message.chat.id, 'typing')
-                bot.send_message(message.chat.id, "🔘 Cʟɪᴄᴋ Tʜᴇ Bᴜᴛᴛᴏɴ Tᴏ Vɪsɪᴛ Tʜᴇ Pʀᴇᴠɪᴇᴡ Pᴀɢᴇ:", reply_markup=markup)
-            # Send the size information
-                size_info = f"📏 WᴇʙM Sɪᴢᴇ: {webm_size} bytes\n📏 Rᴇsɪᴢᴇᴅ Dɪᴍᴇɴsɪᴏɴs: {new_width}x{new_height}"
-                bot.send_chat_action(message.chat.id, 'typing')
-                bot.send_message(message.chat.id, size_info, reply_to_message_id=sent_message.message_id)
-
-        except Exception as e:
-            bot.send_chat_action(message.chat.id, 'typing')
-            bot.send_message(message.chat.id, e)
-
-        try:
-            os.remove(f"{f72hs}.apng")
-            os.remove(f"{f72hs}.webm")
-        except Exception as e:
-            bot.send_chat_action(message.chat.id, 'typing')
-            bot.send_message(message.chat.id, e)
-
-    else:
-        bot.send_chat_action(message.chat.id, 'typing')
-        bot.send_message(message.chat.id, "❌ Oɴʟʏ Sᴜᴘᴘᴏʀᴛ Wᴇʙᴍ Fɪʟᴇs. Pʟᴇᴀsᴇ Uᴘʟᴏᴀᴅ A Vᴀʟɪᴅ Wᴇʙᴍ Fɪʟᴇ.", parse_mode="Markdown")
-
-
 @bot.message_handler(commands=['cancel', 'start'])
 def start_fun(message):
+    delete_all_saved_messages_v2(message.chat.id)
     bot.send_chat_action(message.chat.id, 'typing') 
     user_id = str(message.from_user.id)
     result_data = get_user_data(user_id)
@@ -177,30 +46,162 @@ def start_fun(message):
     if result_data:
         formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
         result = "\n".join(formatted_links)
-        bot.send_message(message.chat.id, f"{jinxx_mess_start}\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", parse_mode="Markdown")
+        save = bot.send_message(message.chat.id, f"{command_list_header_text}\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", reply_markup=command_list, parse_mode="Markdown")
+        saved_message_ids_v2.append(save.message_id)
     else:
-        bot.send_message(message.chat.id, f"{jinxx_mess_start}", parse_mode="Markdown")
-
-    
-@bot.message_handler(commands=['newpack'])
-def create_sticker_pack(message):
-    user_states[message.chat.id] = STICKER_PACK_TITLE
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+        save = bot.send_message(message.chat.id, command_list_header_text, reply_markup=command_list, parse_mode="Markdown")
+        saved_message_ids_v2.append(save.message_id)
         
-@bot.message_handler(commands=['apngtowebm'])
-def create_sticker_pack(message):
-    user_states[message.chat.id] = APNG_TO_WEBM
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ APNG Fɪʟᴇ")
+    bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'back')
+def handle_call_back(call):
+    user_id = str(call.from_user.id)
+    result_data = get_user_data(user_id)
+    user_states[call.message.chat.id] = HOME
+    if result_data:
+        formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
+        result = "\n".join(formatted_links)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=f"{command_list_header_text}\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", reply_markup=command_list, parse_mode="Markdown")
+    else:
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=command_list_header_text, reply_markup=command_list, parse_mode="Markdown")
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'newpack')
+def handle_call_newpack(call):
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="📂 Sᴇɴᴅ Tʜᴇ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ Fᴏʀ Cʀᴇᴀᴛɪɴɢ A Nᴇᴡ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ:", reply_markup=command_back)
+    user_states[call.message.chat.id] = STICKER_PACK_TITLE
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'addsticker')
+def create_sticker_pack(call):
+    user_states[call.message.chat.id] = ADD_LINK_STICKER
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ:", reply_markup=command_back)
+    
+    
+@bot.callback_query_handler(func=lambda call: call.data == 'delsticker')
+def create_sticker_pack(call):
+    user_states[call.message.chat.id] = DELSTICKER
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ:", reply_markup=command_back)
+    
+    
+
+@bot.callback_query_handler(func=lambda call: call.data == 'apngtowebm')
+def create_sticker_pack(call):
+    user_states[call.message.chat.id] = APNG_TO_WEBM
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="📂 Sᴇɴᴅ Pɴɢ, Aᴘɴɢ, Gɪғ, Vɪᴅᴇᴏ Fɪʟᴇ:", reply_markup=command_back)
+    
+    
+@bot.callback_query_handler(func=lambda call: call.data == 'stickerdownload')
+def create_sticker_pack(call):
+    user_states[call.message.chat.id] = STICKER_DOWNLOAD
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ:", reply_markup=command_back)
 
 
 
-@bot.message_handler(commands=['delsticker'])
-def create_sticker_pack(message):
-    user_states[message.chat.id] = DELSTICKER
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, "💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ")
+@bot.callback_query_handler(func=lambda call: call.data == 'delpack')
+def create_sticker_pack(call):
+    user_states[call.message.chat.id] = DELPACK
+    user_id = str(call.from_user.id)
+    result_data = get_user_data(user_id)
+    if result_data:
+        formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
+        result = "\n".join(formatted_links)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=f"🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ:\n\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", reply_markup=command_back, parse_mode="Markdown")
+    else:
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=f"🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ:", reply_markup=command_back, parse_mode="Markdown")
+    
+@bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == APNG_TO_WEBM)
+def handle_document(message):
+    try:
+        bot.send_chat_action(message.chat.id, 'typing')
+        save = bot.reply_to(message, f"🍥 Pʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ `{message.document.mime_type}` ғɪʟᴇ...", parse_mode="Markdown")
+        saved_message_ids.append(save.message_id)
+        saved_message_ids.append(message.message_id)
+        
+        file_info = bot.get_file(message.document.file_id)
+        bot.send_chat_action(message.chat.id, 'upload_document')
+        downloaded_file = bot.download_file(file_info.file_path)
+        f72hs = message.from_user.id
+        file_path = file_info.file_path
+        content_type = file_info.file_path.split('.')[-1]
+        document_file_name_jinxx = f"{f72hs}.{content_type}"
+        with open(document_file_name_jinxx, "wb") as file:
+            file.write(downloaded_file)
+    except Exception as e:
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, e)
+    if content_type == "png":
+        file1_type = check_image_type(document_file_name_jinxx)
+        if file1_type == "apng":
+            try:
+                sticker_main_size = get_apng_size(document_file_name_jinxx)
+                webm_size, new_width, new_height = apng_to_webm(document_file_name_jinxx, f"{f72hs}.webm", sticker_main_size)
+            except Exception as e:
+                bot.send_chat_action(message.chat.id, 'typing')
+                bot.send_message(message.chat.id, e)       
+        else:
+            try:
+                sticker_main_size = get_apng_size(document_file_name_jinxx)
+                webm_size, new_width, new_height = png_to_webm(document_file_name_jinxx, f"{f72hs}.webm", sticker_main_size)
+            except Exception as e:
+                bot.send_chat_action(message.chat.id, 'typing')
+                bot.send_message(message.chat.id, e)       
+                
+    elif content_type == "gif":
+        print("2")
+        try:
+            sticker_main_size = get_apng_size(document_file_name_jinxx)
+            webm_size, new_width, new_height = gif_to_webm(document_file_name_jinxx, f"{f72hs}.webm", sticker_main_size)
+        except Exception as e:
+            bot.send_chat_action(message.chat.id, 'typing')
+            bot.send_message(message.chat.id, e)
+            
+    elif content_type == "mp4":
+        try:
+            print("82727")
+            sticker_main_size = get_video_size(document_file_name_jinxx)
+            webm_size, new_width, new_height = video_to_webm(document_file_name_jinxx, f"{f72hs}.webm", sticker_main_size)
+        except Exception as e:
+            bot.send_chat_action(message.chat.id, 'typing')
+            bot.send_message(message.chat.id, e)
+            
+    else:
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, f"``{content_type}`` Unsupported MIME type", parse_mode="Markdown")
+    if os.path.exists(f"{f72hs}.webm"):
+        with open(f"{f72hs}.webm", 'rb') as sticker_file:
+            delete_all_saved_messages(message.chat.id)
+            bot.send_chat_action(message.chat.id, 'upload_document')
+            size_info = f"📏 Sɪᴢᴇ: {webm_size} bytes\n📏 Sɪᴢᴇ: {new_width}x{new_height}"
+            sent_message = bot.send_document(message.chat.id, sticker_file, caption=size_info)
+            file_id = sent_message.document.file_id
+            file_path = bot.get_file(file_id).file_path
+            base_url = 'https://api.telegram.org/file/bot' + TOKEN
+            full_raw_link = base_url + '/' + file_path
+            preju83 = f"https://jinix6.github.io/Webm_preview?video={full_raw_link}"
+            markup = types.InlineKeyboardMarkup()
+            webApp = types.WebAppInfo(preju83)
+            button = types.InlineKeyboardButton(text="👁️Pʀᴇᴠɪᴇᴡ", web_app=webApp)
+            markup.add(button)
+            bot.send_chat_action(message.chat.id, 'typing')
+            bot.edit_message_reply_markup(chat_id=message.chat.id,
+                                  message_id=sent_message.message_id,
+                                  reply_markup=markup)
+                           
+
+            
+            #bot.send_message(message.chat.id, size_info, reply_markup=markup)
+    try:
+        os.remove(document_file_name_jinxx)
+        os.remove(f"{f72hs}.webm")
+    except Exception as e:
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, e)
+            
+            
+            
 
 @bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == DELSTICKER)
 def handle_sticker(message):
@@ -224,14 +225,10 @@ def handle_sticker(message):
 
 
     
-@bot.message_handler(commands=['stickerdownload'])
-def create_sticker_pack(message):
-    user_states[message.chat.id] = STICKER_DOWNLOAD
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, "💟 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ")
-    
+
 @bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == STICKER_DOWNLOAD)
 def handle_sticker(message):
+    
     sticker_id = message.sticker.file_id
     user_id_jinxx = message.from_user.id
     # Get sticker file details
@@ -260,17 +257,11 @@ def handle_sticker(message):
     except Exception as e:
         bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, e)
+        
+    bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
 
 
 
-
-
-@bot.message_handler(commands=['delpack'])
-def create_sticker_pack(message):
-    user_states[message.chat.id] = DELPACK
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, "🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ", reply_markup=send_st_pack_link_text)
-    
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == DELPACK)
 def handle_document4(message):
     sticker_pack_link = message.text
@@ -280,23 +271,21 @@ def handle_document4(message):
         try:
             bot.delete_sticker_set(sticker_pack_name)
             bot.send_chat_action(message.chat.id, 'typing')
+            bot.send_message(message.chat.id, "✅ Dᴏɴᴇ! Tʜᴇ Sᴛɪᴄᴋᴇʀ Sᴇᴛ Is Gᴏɴᴇ.", parse_mode="Markdown")
             data_to_delete = [message.text]
             delete_data_from_json(user_id, data_to_delete)
-
             result_data = get_user_data(user_id)
             if result_data:
                 formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
                 result = "\n".join(formatted_links)
-                bot.send_message(message.chat.id, f"{jinxx_mess_start}\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", parse_mode="Markdown")
+                bot.send_message(message.chat.id, f"{command_list_header_text}\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", reply_markup=command_list, parse_mode="Markdown")
             else:
-                bot.send_message(message.chat.id, f"{jinxx_mess_start}", parse_mode="Markdown")
-        
-            
-            
-           
+                bot.send_message(message.chat.id, command_list_header_text, reply_markup=command_list, parse_mode="Markdown")
             user_states[message.chat.id] = HOME
         except telebot.apihelper.ApiException as e:
             if "STICKERSET_INVALID" in str(e):
+                data_to_delete = [message.text]
+                delete_data_from_json(user_id, data_to_delete)
                 bot.send_chat_action(message.chat.id, 'typing')
                 bot.send_message(message.chat.id, f"😢 Tʜɪs Mᴇᴛʜᴏᴅ Tᴏ Dᴇʟᴇᴛᴇ A Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Fʀᴏᴍ A Sᴇᴛ Cʀᴇᴀᴛᴇᴅ Bʏ Tʜᴇ Bᴏᴛ.", parse_mode="Markdown")
             else:
@@ -311,42 +300,45 @@ def handle_document4(message):
 
 
 
-@bot.message_handler(commands=['addsticker'])
-def create_sticker_pack(message):
-    user_states[message.chat.id] = ADD_LINK_STICKER
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, "🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ", reply_markup=send_st_pack_link_text)
+
 
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == ADD_LINK_STICKER)
 def handle_document3(message):
+    sticker_pack_link = message.text
     user_id = str(message.from_user.id)
-    if user_id not in user_data:
-        user_data[user_id] = {}
+    if check_link(sticker_pack_link):
+        if user_id not in user_data:
+            user_data[user_id] = {}
+        user_data[user_id]['add_link_sticker'] = message.text
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+        user_states[message.chat.id] = ADD_STICKER
+    else:
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, f"❌ Tʜᴇ Mᴇssᴀɢᴇ Is Nᴏᴛ A Vᴀʟɪᴅ URL.\n\n```🔗Exᴀᴍᴘʟᴇ: https://t.me/addstickers/STICKER_NAME```", parse_mode="Markdown", reply_markup=send_st_pack_link_text)
 
-    user_data[user_id]['add_link_sticker'] = message.text
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
-    user_states[message.chat.id] = ADD_STICKER
-    
 
-    
+
+
+
 @bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == ADD_STICKER)
 def handle_document2(message):
-    user_id = str(message.from_user.id)
-    
-    if user_id not in user_data:
-        user_data[user_id] = {}
+    if message.document.mime_type == 'video/webm':
+        user_id = str(message.from_user.id)
+        if user_id not in user_data:
+            user_data[user_id] = {}
+        sticker_pack_link = user_data[user_id]['add_link_sticker']
+        sticker_pack_name = sticker_pack_link.split("/")[-1]
+        bot.add_sticker_to_set(user_id, sticker_pack_name, emojis="⭐", webm_sticker=message.document.file_id)
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, f"Sticker Added {sticker_pack_link}")
+        bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+    else:
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
         
-    sticker_pack_link = user_data[user_id]['add_link_sticker']
     
-    sticker_pack_name = sticker_pack_link.split("/")[-1]
-    bot.add_sticker_to_set(user_id, sticker_pack_name, emojis="⭐", webm_sticker=message.document.file_id)
-    bot.send_chat_action(message.chat.id, 'typing')
-    bot.send_message(message.chat.id, f"Sticker Added {sticker_pack_link}")
-    bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
-    
-    
-    
+
 @bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE)
 def handle_document2(message):
     if message.document.mime_type == 'video/webm':
@@ -378,7 +370,87 @@ def handle_document2(message):
     else:
         bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+
+#AUTOMATIC DELETE UNNECESSARY MESSAGE V1{
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == HOME, content_types=['audio', 'photo', 'voice', 'video', 'document', 'text', 'location', 'contact', 'sticker'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE, content_types=['audio', 'photo', 'voice', 'video', 'text', 'location', 'contact', 'sticker'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == ADD_LINK_STICKER, content_types=['audio', 'photo', 'voice', 'video', 'document', 'text', 'location', 'contact', 'sticker'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == ADD_STICKER, content_types=['audio', 'photo', 'voice', 'video', 'text', 'location', 'contact', 'sticker'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == DELSTICKER, content_types=['audio', 'photo', 'voice', 'video', 'document', 'text', 'location', 'contact'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+        
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == DELPACK, content_types=['audio', 'photo', 'voice', 'video', 'document', 'location', 'contact', 'sticker'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+        
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == APNG_TO_WEBM, content_types=['audio', 'voice', 'text', 'location', 'contact', 'sticker', 'video', 'photo'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+        
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == STICKER_DOWNLOAD, content_types=['audio', 'photo', 'voice', 'video', 'document', 'text', 'location', 'contact'])
+def handle_sba72sbticker(message):
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    except telebot.apihelper.ApiException as e:
+        bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
+#}AUTOMATIC DELETE UNNECESSARY MESSAGE V1
+
+
+
+def delete_all_saved_messages(chat_id):
+    for msg_id in saved_message_ids:
+        try:
+            bot.delete_message(chat_id, msg_id)
+            
+        except Exception as e:
+            print(f"Error deleting message ID {msg_id}: {e}")
+    saved_message_ids.clear()
     
     
+def delete_all_saved_messages_v2(chat_id):
+    for msg_id in saved_message_ids_v2:
+        try:
+            bot.delete_message(chat_id, msg_id)
+            
+        except Exception as e:
+            print(f"Error deleting message ID {msg_id}: {e}")
+    saved_message_ids_v2.clear()
+
+
+
 if __name__ == '__main__':
     bot.infinity_polling(none_stop=True)
