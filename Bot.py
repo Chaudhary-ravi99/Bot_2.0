@@ -33,7 +33,7 @@ b5 = telebot.types.InlineKeyboardButton(text="🔁 Aᴘɴɢ, Pɴɢ, Gɪғ, Vɪ�
 b6 = telebot.types.InlineKeyboardButton(text="📥 Sᴛɪᴄᴋᴇʀ Dᴏᴡɴʟᴏᴀᴅᴇʀ", callback_data='stickerdownload')
 command_list.add(b1, b2, b3, b4, b5, b6)
 command_list_header_text = """
-░░░░▒👾 𝗦𝗧𝗜𝗖𝗞𝗘𝗥 𝗕𝗢𝗧 0.1.8▒░░░░
+░░░░▒👾 𝗦𝗧𝗜𝗖𝗞𝗘𝗥 𝗕𝗢𝗧 0.1.9▒░░░░
 ▓▓▓▓Mᴀᴅᴇ Bʏ [⊏Jɪɴxx⊐](tg://user?id=6903011562) [⊏Jɪɴxx²⊐](tg://user?id=6693765228)▓▓▓▓
 """
 @bot.message_handler(commands=['cancel', 'start'])
@@ -77,7 +77,15 @@ def handle_call_newpack(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'addsticker')
 def create_sticker_pack(call):
     user_states[call.message.chat.id] = ADD_LINK_STICKER
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ:", reply_markup=command_back)
+    user_id = str(call.from_user.id)
+    result_data = get_user_data(user_id)
+    if result_data:
+        formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
+        result = "\n".join(formatted_links)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=f"🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ:\n\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", reply_markup=command_back, parse_mode="Markdown")
+    else:
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text=f"🔗 Sᴇɴᴅ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ:", reply_markup=command_back, parse_mode="Markdown")
+    
     
     
 @bot.callback_query_handler(func=lambda call: call.data == 'delsticker')
