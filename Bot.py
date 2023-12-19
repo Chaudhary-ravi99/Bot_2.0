@@ -6,10 +6,16 @@ import requests
 from telebot.types import InputFile
 import zipfile
 from io import BytesIO
-from jinxx.sticker_sticker_pack_cache import add_data_to_json, get_user_data, delete_data_from_json
+#from jinxx.sticker_sticker_pack_cache import add_data_to_json, get_user_data, delete_data_from_json
 from jinxx.others_jinxx import check_link, generate_random_string, resize_apng_jinxx, get_apng_size, apng_to_webm, gif_to_webm, check_image_type, png_to_webm, video_to_webm, get_video_size
 from jinxx.jinxx_str import *
 from telebot import apihelper
+
+from jinxx.github_data_handler import add_data_to_github, get_user_data_from_github, delete_data_from_github
+
+
+
+
 
 TOKEN = os.getenv('TELEGRAM_BOT_API_ID')
 bot = telebot.TeleBot(TOKEN)
@@ -41,7 +47,7 @@ def start_fun(message):
     delete_all_saved_messages_v2(message.chat.id)
     bot.send_chat_action(message.chat.id, 'typing') 
     user_id = str(message.from_user.id)
-    result_data = get_user_data(user_id)
+    result_data = get_user_data_from_github(user_id)
     user_states[message.chat.id] = HOME
     if result_data:
         formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
@@ -58,7 +64,7 @@ def start_fun(message):
 @bot.callback_query_handler(func=lambda call: call.data == 'back')
 def handle_call_back(call):
     user_id = str(call.from_user.id)
-    result_data = get_user_data(user_id)
+    result_data = get_user_data_from_github(user_id)
     user_states[call.message.chat.id] = HOME
     if result_data:
         formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
@@ -78,7 +84,7 @@ def handle_call_newpack(call):
 def create_sticker_pack(call):
     user_states[call.message.chat.id] = ADD_LINK_STICKER
     user_id = str(call.from_user.id)
-    result_data = get_user_data(user_id)
+    result_data = get_user_data_from_github(user_id)
     if result_data:
         formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
         result = "\n".join(formatted_links)
@@ -112,7 +118,7 @@ def create_sticker_pack(call):
 def create_sticker_pack(call):
     user_states[call.message.chat.id] = DELPACK
     user_id = str(call.from_user.id)
-    result_data = get_user_data(user_id)
+    result_data = get_user_data_from_github(user_id)
     if result_data:
         formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
         result = "\n".join(formatted_links)
@@ -281,8 +287,11 @@ def handle_document4(message):
             bot.send_chat_action(message.chat.id, 'typing')
             bot.send_message(message.chat.id, "✅ Dᴏɴᴇ! Tʜᴇ Sᴛɪᴄᴋᴇʀ Sᴇᴛ Is Gᴏɴᴇ.", parse_mode="Markdown")
             data_to_delete = [message.text]
-            delete_data_from_json(user_id, data_to_delete)
-            result_data = get_user_data(user_id)
+            
+            delete_data_from_github(user_id, data_to_delete)
+            
+            
+            result_data = get_user_data_from_github(user_id)
             if result_data:
                 formatted_links = [f'[▒ 🖇 𝗦𝘁𝗶𝗰𝗸𝗲𝗿 𝗣𝗮𝗰𝗸 𝗟𝗶𝗻𝗸 ▒]({link})' for link in result_data]
                 result = "\n".join(formatted_links)
@@ -293,7 +302,7 @@ def handle_document4(message):
         except telebot.apihelper.ApiException as e:
             if "STICKERSET_INVALID" in str(e):
                 data_to_delete = [message.text]
-                delete_data_from_json(user_id, data_to_delete)
+                delete_data_from_github(user_id, data_to_delete)
                 bot.send_chat_action(message.chat.id, 'typing')
                 bot.send_message(message.chat.id, f"😢 Tʜɪs Mᴇᴛʜᴏᴅ Tᴏ Dᴇʟᴇᴛᴇ A Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Fʀᴏᴍ A Sᴇᴛ Cʀᴇᴀᴛᴇᴅ Bʏ Tʜᴇ Bᴏᴛ.", parse_mode="Markdown")
             else:
@@ -326,9 +335,6 @@ def handle_document3(message):
         bot.send_message(message.chat.id, f"❌ Tʜᴇ Mᴇssᴀɢᴇ Is Nᴏᴛ A Vᴀʟɪᴅ URL.\n\n```🔗Exᴀᴍᴘʟᴇ: https://t.me/addstickers/STICKER_NAME```", parse_mode="Markdown", reply_markup=send_st_pack_link_text)
 
 
-
-
-
 @bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == ADD_STICKER)
 def handle_document2(message):
     if message.document.mime_type == 'video/webm':
@@ -344,8 +350,55 @@ def handle_document2(message):
     else:
         bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+
+
+
+
+@bot.message_handler(content_types=['sticker'], func=lambda message: user_states.get(message.chat.id) == ADD_STICKER)
+def handle_sticker(message):
+    sticker_id = message.sticker.file_id
+    user_id_jinxx = message.from_user.id
+    # Get sticker file details
+    file_info = bot.get_file(sticker_id)
+    file_path = file_info.file_path
+    content_type = file_info.file_path.split('.')[-1]
+    webm_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
+    response = requests.get(webm_url)
+    stucker_don_file_name = f"{user_id_jinxx}sticker.{content_type}"
+    with open(stucker_don_file_name, "wb") as webm_file:
+        webm_file.write(response.content)
         
+    if content_type == "webm":
+        user_id = str(message.from_user.id)
+        if user_id not in user_data:
+            user_data[user_id] = {}
+        sticker_pack_link = user_data[user_id]['add_link_sticker']
+        sticker_pack_name = sticker_pack_link.split("/")[-1]
+        bot.add_sticker_to_set(user_id, sticker_pack_name, emojis="⭐", webm_sticker=message.sticker.file_id)
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, f"Sticker Added {sticker_pack_link}")
+        bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+    else:
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
+    try:
+        os.remove(stucker_don_file_name)
+    except Exception as e:
+        bot.send_chat_action(message.chat.id, 'typing')
+        bot.send_message(message.chat.id, e)
+        
+    bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
     
+
+
+
+
+
+
+
+
+
+
 
 @bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE)
 def handle_document2(message):
@@ -366,7 +419,9 @@ def handle_document2(message):
             bot.send_chat_action(message.chat.id, 'typing')
             sticker_pack_link = f"https://t.me/addstickers/{sticker_pack_name}"
             bot.send_message(message.chat.id, f"{sticker_pack_cre_mess} {sticker_pack_link}")
-            add_data_to_json(user_id, sticker_pack_link)
+            #add_data_to_json(user_id, sticker_pack_link)
+            add_data_to_github(user_id, sticker_pack_link)
+            
             user_states[message.chat.id] = HOME
         except telebot.apihelper.ApiException as e:
             if "invalid sticker set name is specified" in str(e):
@@ -401,7 +456,7 @@ def handle_sba72sbticker(message):
     except telebot.apihelper.ApiException as e:
         bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
 
-@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == ADD_STICKER, content_types=['audio', 'photo', 'voice', 'video', 'text', 'location', 'contact', 'sticker'])
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == ADD_STICKER, content_types=['audio', 'photo', 'voice', 'video', 'text', 'location', 'contact'])
 def handle_sba72sbticker(message):
     try:
         bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
