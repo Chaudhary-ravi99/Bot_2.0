@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '0 */1 * * *'
 
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
         run: python -m venv venv
 
       - name: Activate the virtual environment
-        run: source venv/bin/activate
+        run: . venv/bin/activate
 
       - name: Install required libraries
         run: |
@@ -33,16 +33,16 @@ jobs:
           python -m pip install numpy==1.26.2
           python -m pip install imageio==2.33.1
           python -m pip install Pillow==10.1.0
-          python -m pip install requests==2.31.0
           sudo apt-get install ffmpeg
 
-      - name: Run Bot.py with retry
+      - name: Check if script is running
         run: |
-          retries=3
-          until [ $retries -le 0 ]; do
-            flock -n ./lockfile python Bot.py && break
-            retries=$((retries-1))
-            sleep 5  # Adjust the sleep duration as needed
-          done
+          if pgrep -f "Bot.py" ; then
+            echo "Bot.py is already running, skipping..."
+            exit 0
+          fi
+
+      - name: Run Bot.py
+        run: python Bot.py
         env:
           TELEGRAM_BOT_API_ID: ${{ secrets.TELEGRAM_BOT_API_ID }}
