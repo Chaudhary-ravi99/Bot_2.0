@@ -6,13 +6,10 @@ import requests
 from telebot.types import InputFile
 import zipfile
 from io import BytesIO
-#from jinxx.sticker_sticker_pack_cache import add_data_to_json, get_user_data, delete_data_from_json
-from jinxx.others_jinxx import check_link, generate_random_string, resize_apng_jinxx, get_apng_size, apng_to_webm, gif_to_webm, check_image_type, png_to_webm, video_to_webm, get_video_size
+from jinxx.others_jinxx import check_link, generate_random_string, resize_apng_jinxx, get_apng_size, apng_to_webm, gif_to_webm, check_image_type, png_to_webm, video_to_webm, get_video_size, check_letter_len
 from jinxx.jinxx_str import *
 from telebot import apihelper
-
 from jinxx.github_data_handler import add_data_to_github, get_user_data_from_github, delete_data_from_github
-
 
 
 
@@ -25,7 +22,7 @@ user_states = {}
 user_data = {}
 saved_message_ids = []
 saved_message_ids_v2 = []
-HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK, STICKER_DOWNLOAD, DELSTICKER = range(8)
+HOME, STICKER_PACK_TITLE, APNG_TO_WEBM, ADD_STICKER, ADD_LINK_STICKER, DELPACK, STICKER_DOWNLOAD, DELSTICKER, CREATE_NEW_PACK = range(9)
 send_st_pack_link_text = telebot.types.ForceReply(input_field_placeholder="🔗 Pᴀsᴛᴇ Yᴏᴜʀ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Lɪɴᴋ Hᴇʀᴇ:")
 command_back = telebot.types.InlineKeyboardMarkup(row_width=1)
 b1 = telebot.types.InlineKeyboardButton(text="🔙 Bᴀᴄᴋ", callback_data='back')
@@ -54,10 +51,15 @@ def start_fun(message):
         result = "\n".join(formatted_links)
         save = bot.send_message(message.chat.id, f"{command_list_header_text}\n⚡⃨ 𝗖⃨𝗥⃨𝗘⃨𝗔⃨𝗧⃨𝗘⃨𝗗⃨ 𝗦⃨𝗧⃨𝗜⃨𝗖⃨𝗞⃨𝗘⃨𝗥⃨ 𝗣⃨𝗔⃨𝗖⃨𝗞⃨ 𝗟⃨𝗜⃨𝗦⃨𝗧⃨\n{result}", reply_markup=command_list, parse_mode="Markdown")
         saved_message_ids_v2.append(save.message_id)
+        if user_id not in user_data:
+            user_data[user_id] = {}
+        user_data[user_id]['editble_jinxx_mes_id'] = save.message_id
     else:
         save = bot.send_message(message.chat.id, command_list_header_text, reply_markup=command_list, parse_mode="Markdown")
         saved_message_ids_v2.append(save.message_id)
-        
+        if user_id not in user_data:
+            user_data[user_id] = {}
+        user_data[user_id]['editble_jinxx_mes_id'] = save.message_id
     bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
 
 
@@ -76,7 +78,7 @@ def handle_call_back(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == 'newpack')
 def handle_call_newpack(call):
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="📂 Sᴇɴᴅ Tʜᴇ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ Fᴏʀ Cʀᴇᴀᴛɪɴɢ A Nᴇᴡ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ:", reply_markup=command_back)
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="✎ᝰ Tᴇʟʟ Mᴇ Tʜᴇ Nᴀᴍᴇ Oғ Yᴏᴜʀ Pᴀᴄᴋ:", reply_markup=command_back)
     user_states[call.message.chat.id] = STICKER_PACK_TITLE
 
 
@@ -399,16 +401,40 @@ def handle_sticker(message):
 
 
 
-
-@bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE)
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE)
 def handle_document2(message):
+    user_id = str(message.from_user.id)
+    if user_id not in user_data:
+        user_data[user_id] = {}
+    editble_jinxx_mes_id = user_data[user_id]['editble_jinxx_mes_id']
+    if check_letter_len(message.text):
+        bot.edit_message_text(chat_id=message.chat.id, message_id=editble_jinxx_mes_id, text="📂 Sᴇɴᴅ Tʜᴇ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ Fᴏʀ Cʀᴇᴀᴛɪɴɢ A Nᴇᴡ Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ:", reply_markup=command_back)
+        user_states[message.chat.id] = CREATE_NEW_PACK
+        if user_id not in user_data:
+            user_data[user_id] = {}
+        user_data[user_id]['new_sticker_pack_name'] = message.text
+    else:
+        bot.edit_message_text(chat_id=message.chat.id, message_id=editble_jinxx_mes_id, text="✎ᝰ Tᴇʟʟ Mᴇ Tʜᴇ Nᴀᴍᴇ Oғ Yᴏᴜʀ Pᴀᴄᴋ.\n\n❌ Tɪᴛʟᴇ Sʜᴏᴜʟᴅ Bᴇ 45 Cʜᴀʀᴀᴄᴛᴇʀs Oʀ Lᴇss.", reply_markup=command_back)
+        
+        
+    
+
+
+
+@bot.message_handler(content_types=['document'], func=lambda message: user_states.get(message.chat.id) == CREATE_NEW_PACK)
+def handle_document2(message):
+    user_id = str(message.from_user.id)
     if message.document.mime_type == 'video/webm':
         try:
+            if user_id not in user_data:
+                user_data[user_id] = {}
+            user_sticker_pack_tittle = user_data[user_id]['new_sticker_pack_name']
+    
             user_id = str(message.from_user.id)
             random_result = generate_random_string()
             sticker_pack_name = f'{random_result}_by_{bot_username}'
             print(sticker_pack_name)
-            sticker_pack_title = '👩🏻‍💻 Sᴛɪᴄᴋᴇʀ Pᴀᴄᴋ Cʀᴇᴀᴛᴇᴅ Bʏ @ApngTowebm_Bot'
+            sticker_pack_title = f"{user_sticker_pack_tittle} Bʏ @ApngTowebm_Bot"
             pack_info = bot.create_new_sticker_set(
             user_id=user_id,
             name=sticker_pack_name,
@@ -434,6 +460,9 @@ def handle_document2(message):
         bot.send_chat_action(message.chat.id, 'typing')
         bot.send_message(message.chat.id, "📂 Sᴇɴᴅ Wᴇʙᴍ Sᴛɪᴄᴋᴇʀ Fɪʟᴇ")
 
+
+
+
 #AUTOMATIC DELETE UNNECESSARY MESSAGE V1{
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == HOME, content_types=['audio', 'photo', 'voice', 'video', 'document', 'text', 'location', 'contact', 'sticker'])
 def handle_sba72sbticker(message):
@@ -442,7 +471,7 @@ def handle_sba72sbticker(message):
     except telebot.apihelper.ApiException as e:
         bot.send_message(message.chat.id, f"😅 Dᴏɴ'ᴛ Wᴏʀʀʏ, Jᴜsᴛ Iɢɴᴏʀᴇ Iᴛ.\n\n```{e}", parse_mode="Markdown")
 
-@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE, content_types=['audio', 'photo', 'voice', 'video', 'text', 'location', 'contact', 'sticker'])
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == STICKER_PACK_TITLE, content_types=['audio', 'photo', 'voice', 'video', 'text', 'location', 'contact', 'sticker', 'document'])
 def handle_sba72sbticker(message):
     try:
         bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
