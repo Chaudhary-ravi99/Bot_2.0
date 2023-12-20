@@ -24,7 +24,7 @@ jobs:
         run: python -m venv venv
 
       - name: Activate the virtual environment
-        run: . venv/bin/activate
+        run: source venv/bin/activate
 
       - name: Install required libraries
         run: |
@@ -48,4 +48,3 @@ jobs:
           TELEGRAM_BOT_API_ID: ${{ secrets.TELEGRAM_BOT_API_ID }}
           UPLOAD_API_CODE: ${{ secrets.UPLOAD_API_CODE }}
           REPO_NAME: ${{ secrets.REPO_NAME }}
-          
