@@ -6,6 +6,11 @@ import os
 from PIL import Image
 import numpy as np
 
+def check_letter_len(title):
+    if len(title) >= 1 and len(title) <= 45:
+        return True
+    return False
+
 
 
 def check_link(message):
