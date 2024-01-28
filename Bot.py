@@ -14,7 +14,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 
-TOKEN = os.getenv('TELEGRAM_BOT_API_ID')
+TOKEN = os.getenv('6761878212:AAG56yYdLxlulBh0m3CyAqHk4xH-oUdk2CY')
 bot = telebot.TeleBot(TOKEN)
 bot_info = bot.get_me()
 bot_username = bot_info.username
